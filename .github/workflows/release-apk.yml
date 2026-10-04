@@ -1,0 +1,68 @@
+name: Release APK (heatrack)
+
+# Manual: Actions -> "Release APK (heatrack)" -> Run workflow.
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions):
+#   HEATRACK_API_BASE_URL      e.g. https://api.your-domain.com   (deployed backend, HTTPS)
+#   HEATRACK_SUPABASE_URL      https://<project-ref>.supabase.co  (Supabase project "heatrack")
+#   HEATRACK_SUPABASE_ANON_KEY Supabase anon/publishable key (public client key)
+#   HEATRACK_GOOGLE_SERVICES_JSON_B64  base64 of google-services.json (Firebase project "heatrack")
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      API_BASE_URL: ${{ secrets.HEATRACK_API_BASE_URL }}
+      SUPABASE_URL: ${{ secrets.HEATRACK_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.HEATRACK_SUPABASE_ANON_KEY }}
+      GOOGLE_SERVICES_JSON_B64: ${{ secrets.HEATRACK_GOOGLE_SERVICES_JSON_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required secrets
+        run: |
+          missing=0
+          for v in API_BASE_URL SUPABASE_URL SUPABASE_ANON_KEY GOOGLE_SERVICES_JSON_B64; do
+            if [ -z "${!v}" ]; then echo "::error::Missing secret HEATRACK_${v}"; missing=1; fi
+          done
+          case "$API_BASE_URL" in https://*) ;; *) echo "::error::HEATRACK_API_BASE_URL must be https://"; missing=1;; esac
+          case "$SUPABASE_URL" in https://*.supabase.co) ;; *) echo "::error::HEATRACK_SUPABASE_URL should look like https://<ref>.supabase.co"; missing=1;; esac
+          exit $missing
+      - name: Write google-services.json (not committed)
+        run: |
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("android/app/google-services.json"))
+          pkgs = [c["client_info"]["android_client_info"]["package_name"] for c in d["client"]]
+          print("Firebase project:", d["project_info"]["project_id"], "android apps:", pkgs)
+          if "com.familypulse.familypulse" not in pkgs:
+              raise SystemExit("::error::google-services.json has no Android app with package com.familypulse.familypulse")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: >-
+          flutter build apk --release
+          --dart-define=API_BASE_URL="$API_BASE_URL"
+          --dart-define=AUTH_MODE=supabase
+          --dart-define=SUPABASE_URL="$SUPABASE_URL"
+          --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heatrack-release-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14

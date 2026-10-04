@@ -9,7 +9,7 @@ explainable anomaly and stale‑data alerts.
 > anything (no AFib/heart‑attack inference from heart‑rate samples).
 
 Status and evidence for every acceptance criterion: **[docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)**.
-Deployment and operations: **[docs/RUNBOOK.md](docs/RUNBOOK.md)**.
+Deployment and operations: **[docs/RUNBOOK.md](docs/RUNBOOK.md)**. Connecting the `heatrack` Supabase/Firebase projects: **[docs/SETUP_HEATRACK_PROJECTS.md](docs/SETUP_HEATRACK_PROJECTS.md)**.
 
 ## Integration decision
 
