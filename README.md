@@ -176,8 +176,8 @@ native iOS notifications.
 
 ## Remaining blockers (summary)
 
-* No Android phone/SDK in the build sandbox → the Kotlin collector was syntax‑checked (ktlint)
-  but **not compiled or run**; no real Health Connect reading has reached the backend yet.
+* The Kotlin collector compiles in GitHub Actions (debug APK artifact on every push) but has
+  **not been run on a phone**; no real Health Connect reading has reached the backend yet.
 * No Supabase project, Firebase project or APNs key were available → real sign‑in and real
   push delivery are unverified (fake transport + test‑signed JWTs were used).
 * No public server/domain → nothing is deployed; `localhost` is not reachable from India/UK.
