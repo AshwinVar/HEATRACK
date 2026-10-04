@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Path to a Firebase service-account JSON (mounted secret). If unset, Application
     # Default Credentials are used.
     firebase_credentials_file: str | None = None
+    # Alternative for platforms without secret files (e.g. Railway variables): the full
+    # service-account JSON as a string. Never logged.
+    firebase_credentials_json: str | None = None
     push_max_attempts: int = 8
     push_backoff_base_seconds: float = 30.0
     push_backoff_max_seconds: float = 3600.0

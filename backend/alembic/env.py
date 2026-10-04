@@ -3,7 +3,7 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import create_engine, pool
+from sqlalchemy import create_engine, pool, text
 
 from app.config import get_settings
 from app.models import Base
@@ -28,9 +28,16 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     engine = create_engine(_url(), poolclass=pool.NullPool)
     with engine.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
-        with context.begin_transaction():
-            context.run_migrations()
+        # Serialise concurrent deploys (e.g. two API replicas starting at once).
+        connection.execute(text("SELECT pg_advisory_lock(727274)"))
+        connection.commit()
+        try:
+            context.configure(connection=connection, target_metadata=target_metadata)
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            connection.execute(text("SELECT pg_advisory_unlock(727274)"))
+            connection.commit()
 
 
 if context.is_offline_mode():

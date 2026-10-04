@@ -64,11 +64,14 @@ class FcmTransport:
         from firebase_admin import credentials
 
         if not firebase_admin._apps:
-            cred = (
-                credentials.Certificate(settings.firebase_credentials_file)
-                if settings.firebase_credentials_file
-                else credentials.ApplicationDefault()
-            )
+            if settings.firebase_credentials_json:
+                import json
+
+                cred = credentials.Certificate(json.loads(settings.firebase_credentials_json))
+            elif settings.firebase_credentials_file:
+                cred = credentials.Certificate(settings.firebase_credentials_file)
+            else:
+                cred = credentials.ApplicationDefault()
             firebase_admin.initialize_app(cred)
 
     def send(self, msg: PushMessage) -> SendResult:

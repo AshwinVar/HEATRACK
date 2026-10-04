@@ -29,15 +29,16 @@ server env file; private keys go **only** onto the server (and GitHub secrets wh
    `GoogleService-Info.plist` (used on the Mac when building iOS).
 3. **Project settings → Cloud Messaging → Apple app configuration**: upload an APNs
    authentication key (.p8) from your Apple Developer account.
-4. **Project settings → Service accounts → Generate new private key** → save on the server as
-   `infra/secrets/firebase-service-account.json` (chmod 600). This is a private credential: do
-   not commit it or send it in chat.
+4. **Project settings → Service accounts → Generate new private key** → paste its contents into
+   the Railway variable `FP_FIREBASE_CREDENTIALS_JSON` (or, on a VM, save as
+   `infra/secrets/firebase-service-account.json`). Private credential: do not commit it or send
+   it in chat.
 
-## Server
+## Server (Railway)
 
-Server env template: `infra/.env.production.example` (also set `API_DOMAIN`, `WEB_DOMAIN`).
-Deploy steps: `docs/RUNBOOK.md` §2. Then set GitHub secret `HEATRACK_API_BASE_URL` to
-`https://<API_DOMAIN>`.
+Follow `docs/DEPLOY_RAILWAY.md` (two services from `backend/`: API + worker). The Firebase
+service-account JSON goes into the Railway variable `FP_FIREBASE_CREDENTIALS_JSON`. Then set
+GitHub secret `HEATRACK_API_BASE_URL` to the Railway API domain.
 
 ## Build the phone APK
 
