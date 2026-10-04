@@ -1,0 +1,18 @@
+# secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+infra/secrets/
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase-service-account*.json
+*.p8
+*.keystore
+*.jks
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

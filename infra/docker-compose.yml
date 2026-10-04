@@ -1,0 +1,54 @@
+# LOCAL DEVELOPMENT stack: Postgres + migrations + API + worker.
+# Development mode: locally minted tokens and the FAKE push transport (both labelled in the
+# app). Ports are bound to 127.0.0.1 only. This is NOT reachable from India or the UK.
+name: familypulse-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: familypulse
+      POSTGRES_USER: familypulse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U familypulse -d familypulse"]
+      interval: 3s
+      retries: 20
+    # No published port: only the api/worker containers can reach the database.
+
+  migrate:
+    build: ../backend
+    command: ["alembic", "upgrade", "head"]
+    environment: &devenv
+      FP_APP_ENV: development
+      FP_DATABASE_URL: postgresql+psycopg://familypulse:${POSTGRES_PASSWORD}@db:5432/familypulse
+      FP_DEV_TOKEN_MINT_ENABLED: "true"
+      FP_DEV_JWT_SECRET: ${FP_DEV_JWT_SECRET:?set FP_DEV_JWT_SECRET in infra/.env}
+      # Host -> container traffic arrives from the Docker bridge, not loopback.
+      FP_DEV_TOKEN_ALLOWED_CIDRS: '["127.0.0.1/32","172.16.0.0/12"]'
+      FP_AUTH_ISSUER: http://127.0.0.1:8000/dev-auth
+      FP_PUSH_TRANSPORT: ${FP_PUSH_TRANSPORT:-fake}
+      FP_CORS_ORIGINS: '["http://127.0.0.1:8080","http://localhost:8080"]'
+    depends_on:
+      db: {condition: service_healthy}
+
+  api:
+    build: ../backend
+    environment: *devenv
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    build: ../backend
+    command: ["python", "-m", "app.worker"]
+    healthcheck: {disable: true}  # no HTTP server in the worker
+    environment: *devenv
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+volumes:
+  pgdata:

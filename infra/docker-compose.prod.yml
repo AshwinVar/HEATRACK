@@ -1,0 +1,49 @@
+# PRODUCTION-SHAPED stack for an always-on Docker host (e.g. a small VM).
+# Database: Supabase-managed Postgres (FP_DATABASE_URL with sslmode=require).
+# Auth: Supabase Auth JWT verification via JWKS. Push: Firebase Admin SDK (FCM -> APNs).
+# Only Caddy publishes ports (80/443, automatic HTTPS). API and worker stay private.
+name: familypulse
+
+services:
+  migrate:
+    build: ../backend
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env.production
+    restart: "no"
+
+  api:
+    build: ../backend
+    env_file: .env.production
+    restart: unless-stopped
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase.json:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    expose: ["8000"]
+
+  worker:
+    build: ../backend
+    command: ["python", "-m", "app.worker"]
+    healthcheck: {disable: true}  # no HTTP server in the worker
+    env_file: .env.production
+    restart: unless-stopped
+    volumes:
+      - ./secrets/firebase-service-account.json:/run/secrets/firebase.json:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
+      WEB_DOMAIN: ${WEB_DOMAIN:?set WEB_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../mobile/build/web:/srv/web:ro
+      - caddy_data:/data
+    depends_on: [api]
+
+volumes:
+  caddy_data:

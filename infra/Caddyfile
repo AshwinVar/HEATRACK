@@ -1,0 +1,18 @@
+# Automatic HTTPS (Let's Encrypt). DNS for both domains must point at this host.
+{$API_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy api:8000
+}
+
+# Optional Flutter web caregiver fallback (does NOT validate native iOS push).
+{$WEB_DOMAIN} {
+	encode gzip
+	root * /srv/web
+	try_files {path} /index.html
+	file_server
+}
