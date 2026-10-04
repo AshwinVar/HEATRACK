@@ -247,7 +247,7 @@ class SyncEngine(
         }
         val upserts = ArrayList<Record>()
         val deletions = ArrayList<String>()
-        var next = token
+        var next: String = token
         var pages = 0
         while (true) {
             val resp = reader.changes(next)
